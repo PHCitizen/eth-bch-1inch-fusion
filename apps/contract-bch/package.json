@@ -1,0 +1,41 @@
+{
+  "name": "contract-bch",
+  "version": "0.11.3",
+  "description": "Example project to develop and test CashScript contracts",
+  "main": "index.js",
+  "type": "module",
+  "author": "mainnet-pat",
+  "license": "MIT",
+  "private": true,
+  "directories": {
+    "lib": "src",
+    "test": "test"
+  },
+  "scripts": {
+    "build": "pnpm clean && pnpm compile",
+    "build:test": "pnpm clean:test && pnpm compile:test",
+    "clean": "rm -rf ./dist && rm -rf ./artifacts",
+    "clean:test": "rm -rf ./dist-test",
+    "compile": "tsc -p tsconfig.json && tsx tasks/index.ts compile",
+    "compile:test": "tsc -p tsconfig.test.json && tsx tasks/index.ts compile",
+    "lint": "eslint . --ext .ts --ignore-path ../../.eslintignore",
+    "prepare": "pnpm build",
+    "prepublishOnly": "pnpm test && pnpm lint",
+    "pretest": "pnpm build:test",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest"
+  },
+  "dependencies": {
+    "@bitauth/libauth": "^3.1.0-next.2",
+    "cashc": "^0.11.3",
+    "cashscript": "^0.11.3",
+    "url-join": "^5.0.0"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^24.1.0",
+    "jest": "^29.7.0",
+    "tsx": "^4.19.2",
+    "typescript": "5.9.0-beta"
+  }
+}
