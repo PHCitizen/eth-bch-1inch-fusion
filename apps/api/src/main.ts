@@ -3,17 +3,16 @@ import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
-import { zValidator } from "@hono/zod-validator";
-
 import { PrismaClient } from "../generated/prisma";
-import { OrderSchema } from "./schema";
+
 import { createEventEmitter } from "./events";
-import { fusionApp } from "./fusion";
+import { Env } from "./utils";
+import { fusionApp, orderApp } from "./routes";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const app = new Hono();
+  const app = new Hono<Env>();
   const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 
   const events = createEventEmitter();
@@ -21,27 +20,13 @@ async function main() {
   app
     .use(logger())
     .use(cors())
+    .use("*", async (c, next) => {
+      c.set("prisma", prisma);
+      c.set("events", events);
+      await next();
+    })
     .route("/fusion-plus", fusionApp())
-    .post("/order/create", zValidator("json", OrderSchema), async (c) => {
-      const data = c.req.valid("json");
-
-      const orderId = await prisma.order.create({
-        data: {
-          ...data,
-          srcTimelock: { create: data.srcTimelock },
-          dstTimelock: { create: data.dstTimelock },
-        },
-      });
-
-      events.emit("Order", { orderId: orderId.uuid });
-      return c.json({ success: true });
-    })
-    .get("/order", async (c) => {
-      const orders = await prisma.order.findMany({
-        omit: { id: true },
-      });
-      return c.json(orders);
-    })
+    .route("/order", orderApp())
     .get(
       "/ws",
       upgradeWebSocket((c) => {
