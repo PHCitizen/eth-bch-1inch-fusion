@@ -2,22 +2,19 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
-import { createNodeWebSocket } from "@hono/node-ws";
 import { PrismaClient } from "../generated/prisma";
 
 import { createEventEmitter } from "./events";
 import { Env } from "./utils";
-import { fusionApp, orderApp } from "./routes";
+import { fusionApp, orderApp, wsApp } from "./routes";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const app = new Hono<Env>();
-  const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
-
   const events = createEventEmitter();
+  const { injectWebSocket, app: wsAppRoute } = wsApp();
 
-  app
+  const app = new Hono<Env>()
     .use(logger())
     .use(cors())
     .use("*", async (c, next) => {
@@ -27,33 +24,14 @@ async function main() {
     })
     .route("/fusion-plus", fusionApp())
     .route("/order", orderApp())
-    .get(
-      "/ws",
-      upgradeWebSocket((c) => {
-        return {
-          onOpen: (_, ws) => {
-            events.addListener("Order", (data) => {
-              const output = JSON.stringify({
-                event: "Order",
-                orderId: data.orderId,
-              });
-              ws.send(output);
-            });
-          },
-          onMessage(_, ws) {
-            ws.send("Pong");
-          },
-          onClose: () => {
-            console.log("Connection closed");
-          },
-        };
-      })
-    );
+    .route("/ws", wsAppRoute);
 
   const server = serve({ port: 3001, fetch: app.fetch }, (e) => {
     console.log(`Running on PORT ${e.port}`);
   });
   injectWebSocket(server);
+
+  return app;
 }
 
 main()
@@ -65,3 +43,5 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
+
+export type HonoRouteType = Awaited<ReturnType<typeof main>>;
