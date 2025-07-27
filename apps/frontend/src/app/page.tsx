@@ -50,25 +50,46 @@ export default function Home() {
     tokenId: "0",
   });
 
-  const handleSellAmountChange = (value: string) => {
-    setSellToken((c) => ({
-      ...c,
-      amount: parseUnits(value, sellToken.decimals),
-    }));
+  const quoteToken = (token1: Token, token2: Token, input: bigint) => {
+    // TODO: fix ratio 1bch/2eth
+    const multiplier = token1.chain === "BitcoinCash" ? 2 : 1 / 2;
 
-    // TODO: fix ouput are always half of the input
-    setBuyToken((c) => ({
-      ...c,
-      amount: parseUnits((Number(value) / 2).toString(), buyToken.decimals),
-    }));
+    return [
+      { ...token1, amount: input },
+      {
+        ...token2,
+        amount: parseUnits(
+          String(Number(formatUnits(input, token1.decimals)) * multiplier),
+          token2.decimals
+        ),
+      },
+    ];
+  };
+
+  const handleSellAmountChange = (value: string) => {
+    const [newSellToken, newBuyToken] = quoteToken(
+      sellToken,
+      buyToken,
+      parseUnits(value, sellToken.decimals)
+    );
+    setSellToken(newSellToken);
+    setBuyToken(newBuyToken);
   };
 
   const handleSwitch = () => {
     if (!buyToken) return;
 
-    const tempToken = sellToken;
-    setSellToken(buyToken);
-    setBuyToken(tempToken);
+    const [newSellToken, newBuyToken] = quoteToken(
+      buyToken,
+      sellToken,
+      parseUnits(
+        formatUnits(sellToken.amount, sellToken.decimals),
+        buyToken.decimals
+      )
+    );
+
+    setSellToken(newSellToken);
+    setBuyToken(newBuyToken);
   };
 
   const handleSwap = async () => {};
@@ -98,6 +119,7 @@ export default function Home() {
                   <Input
                     id="sell-amount"
                     type="number"
+                    min={0}
                     placeholder="0"
                     value={sellAmountFmt}
                     onChange={(e) => handleSellAmountChange(e.target.value)}
