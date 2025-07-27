@@ -1,13 +1,14 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
+import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { zValidator } from "@hono/zod-validator";
-import z from "zod";
 
 import { PrismaClient } from "../generated/prisma";
 import { OrderSchema } from "./schema";
 import { createEventEmitter } from "./events";
+import { fusionApp } from "./fusion";
 
 const prisma = new PrismaClient();
 
@@ -19,6 +20,8 @@ async function main() {
 
   app
     .use(logger())
+    .use(cors())
+    .route("/fusion-plus", fusionApp())
     .post("/order/create", zValidator("json", OrderSchema), async (c) => {
       const data = c.req.valid("json");
 
@@ -32,6 +35,12 @@ async function main() {
 
       events.emit("Order", { orderId: orderId.uuid });
       return c.json({ success: true });
+    })
+    .get("/order", async (c) => {
+      const orders = await prisma.order.findMany({
+        omit: { id: true },
+      });
+      return c.json(orders);
     })
     .get(
       "/ws",
@@ -56,7 +65,9 @@ async function main() {
       })
     );
 
-  const server = serve({ port: 3001, fetch: app.fetch });
+  const server = serve({ port: 3001, fetch: app.fetch }, (e) => {
+    console.log(`Running on PORT ${e.port}`);
+  });
   injectWebSocket(server);
 }
 
