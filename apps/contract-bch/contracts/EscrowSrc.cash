@@ -1,0 +1,55 @@
+pragma cashscript ~0.11.0;
+
+contract EscrowSrc(
+  int publicUnlockTimestamp,
+  int resolverCancellTimestamp,
+  int publicCancelTimestamp,
+
+  bytes32 hashlock,
+  bytes resolverLockingBytecode,
+  bytes makerLockingBytecode
+) {
+  function unlock(bool isResolver, bytes32 secret) {
+    require(tx.version == 2, "Invalid version");
+    require(this.activeInputIndex == 0, "Invalid input index");
+
+    // ensure that all tokens are sent to resolver
+    require(tx.outputs[0].lockingBytecode == resolverLockingBytecode, "Invalid output destination");
+    require(tx.outputs[0].tokenCategory == tx.inputs[0].tokenCategory , "Invalid output category");
+    require(tx.outputs[0].tokenAmount == tx.inputs[0].tokenAmount , "Invalid output token");
+
+    // ensure that secret is revealed
+    require(sha256(secret) == hashlock, "Invalid secret");
+
+    if(isResolver) {
+      // ensure that collateral is sent to resolver
+      require(tx.outputs[0].value == tx.inputs[0].value, "Invalid output collateral");
+    } else {
+      // ensure public unlock time met, 
+      //   then they can sent the collateral to anyone using output 1
+      require(tx.locktime >= publicUnlockTimestamp, "Invalid locktime for public unlock");
+    }
+  }
+
+  function cancel(bool isResolver) {
+    require(tx.version == 2, "Invalid version");
+    require(this.activeInputIndex == 0, "Invalid input index");
+
+    // ensure that all tokens are sent to maker
+    require(tx.outputs[0].lockingBytecode == makerLockingBytecode, "Invalid output. Must be the maker");
+    require(tx.outputs[0].tokenCategory == tx.inputs[0].tokenCategory , "Invalid output category");
+    require(tx.inputs[0].tokenAmount == tx.outputs[0].tokenAmount, "Invalid output token");
+
+    if(isResolver) {
+      require(tx.locktime >= resolverCancellTimestamp, "Invalid locktime for resolver cancel");
+
+      // ensure that collateral is sent to resolver
+      require(tx.outputs[1].lockingBytecode == resolverLockingBytecode, "Invalid output1 destination");
+      require(tx.outputs[1].value == tx.inputs[0].value, "Invalid output1 collateral");
+    } else {
+      // ensure puvlic cancel time met, 
+      //   then they can sent the collateral to anyone using output 1
+      require(tx.locktime >= publicCancelTimestamp, "Invalid locktime for public cancel");
+    }
+  }
+}
