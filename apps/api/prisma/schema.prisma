@@ -11,9 +11,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Chain {
+  BitcoinCash
+  Eth
+}
 
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+model SrcTimelock {
+  id             Int    @id @default(autoincrement())
+  finalityLock   Int
+  resolverUnlock Int
+  publicUnlock   Int
+  resolverCancel Int
+  publicCancel   Int
+  Order          Order?
+}
+
+model DstTimelock {
+  id             Int    @id @default(autoincrement())
+  finalityLock   Int
+  resolverUnlock Int
+  publicUnlock   Int
+  resolverCancel Int
+  Order          Order?
+}
+
+model Order {
+  id   Int    @id @default(autoincrement())
+  uuid String @default(uuid())
+
+  srcChain      Chain
+  srcTimelock   SrcTimelock @relation(fields: [srcTimelockId], references: [id])
+  srcTimelockId Int         @unique
+
+  dstChain      Chain
+  dstTimelock   DstTimelock @relation(fields: [dstTimelockId], references: [id])
+  dstTimelockId Int         @unique
+
+  makerAsset   String
+  takerAsset   String
+  makerAddr    String
+  takerAddr    String
+  makingAmount BigInt
+  takingAmount BigInt
+
+  hashLock String
 }
