@@ -21,8 +21,6 @@ async function main() {
     .use(logger())
     .post("/order/create", zValidator("json", OrderSchema), async (c) => {
       const data = c.req.valid("json");
-      // randomId used to exclude receiving own order
-      const sender = c.req.header("X-ID") || null;
 
       const orderId = await prisma.order.create({
         data: {
@@ -32,31 +30,23 @@ async function main() {
         },
       });
 
-      events.emit("Order", { sender, orderId: orderId.uuid });
+      events.emit("Order", { orderId: orderId.uuid });
       return c.json({ success: true });
     })
     .get(
       "/ws",
       upgradeWebSocket((c) => {
-        let id: string | null = null;
-
         return {
           onOpen: (_, ws) => {
             events.addListener("Order", (data) => {
-              if (!id || data.sender === id) return;
-
-              ws.send(JSON.stringify({ orderId: data.orderId }));
+              const output = JSON.stringify({
+                event: "Order",
+                orderId: data.orderId,
+              });
+              ws.send(output);
             });
           },
-          onMessage(event, ws) {
-            if (!id) {
-              const schema = z.object({ id: z.string() });
-              const result = schema.safeParse(event.data);
-              if (result.success) {
-                id = result.data.id;
-              }
-            }
-
+          onMessage(_, ws) {
             ws.send("Pong");
           },
           onClose: () => {

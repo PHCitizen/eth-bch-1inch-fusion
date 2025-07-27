@@ -2,7 +2,6 @@ import { EventEmitter } from "stream";
 import z from "zod";
 
 export const OrderEventSchema = z.object({
-  sender: z.string().nullable(),
   orderId: z.string(),
 });
 
