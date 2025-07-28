@@ -5,7 +5,7 @@ pragma solidity 0.8.23;
 import { IOrderMixin } from "limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
 import { ExtensionLib } from "limit-order-protocol/contracts/libraries/ExtensionLib.sol";
 import { ITakerInteraction } from "limit-order-protocol/contracts/interfaces/ITakerInteraction.sol";
-import { MerkleProof } from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
+import { MerkleProofSha256 } from "./utils/MerkleProofSha256.sol";
 
 import { IEscrowFactory } from "./interfaces/IEscrowFactory.sol";
 import { IMerkleStorageInvalidator } from "./interfaces/IMerkleStorageInvalidator.sol";
@@ -17,7 +17,7 @@ import { SRC_IMMUTABLES_LENGTH } from "./EscrowFactoryContext.sol"; // solhint-d
  * @custom:security-contact security@1inch.io
  */
 contract MerkleStorageInvalidator is IMerkleStorageInvalidator, ITakerInteraction {
-    using MerkleProof for bytes32[];
+    using MerkleProofSha256 for bytes32[];
     using ExtensionLib for bytes;
 
     address private immutable _LIMIT_ORDER_PROTOCOL;
@@ -62,7 +62,7 @@ contract MerkleStorageInvalidator is IMerkleStorageInvalidator, ITakerInteractio
         uint240 rootShortened = uint240(uint256(extraDataArgs.hashlockInfo));
         bytes32 key = keccak256(abi.encodePacked(orderHash, rootShortened));
         bytes32 rootCalculated = takerData.proof.processProofCalldata(
-            keccak256(abi.encodePacked(uint64(takerData.idx), takerData.secretHash))
+            sha256(abi.encodePacked(uint64(takerData.idx), takerData.secretHash))
         );
         if (uint240(uint256(rootCalculated)) != rootShortened) revert InvalidProof();
         lastValidated[key] = ValidationData(takerData.idx + 1, takerData.secretHash);
