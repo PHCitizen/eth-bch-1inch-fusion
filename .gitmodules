@@ -1,0 +1,18 @@
+[submodule "apps/contract-eth/lib/forge-std"]
+	path = apps/contract-eth/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "apps/contract-eth/lib/solidity-utils"]
+	path = apps/contract-eth/lib/solidity-utils
+	url = https://github.com/1inch/solidity-utils
+[submodule "apps/contract-eth/lib/openzeppelin-contracts"]
+	path = apps/contract-eth/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "apps/contract-eth/lib/limit-order-protocol"]
+	path = apps/contract-eth/lib/limit-order-protocol
+	url = https://github.com/1inch/limit-order-protocol
+[submodule "apps/contract-eth/lib/limit-order-settlement"]
+	path = apps/contract-eth/lib/limit-order-settlement
+	url = https://github.com/1inch/limit-order-settlement
+[submodule "apps/contract-eth/lib/murky"]
+	path = apps/contract-eth/lib/murky
+	url = https://github.com/dmfxyz/murky
