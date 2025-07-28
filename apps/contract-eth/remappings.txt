@@ -6,3 +6,5 @@ limit-order-protocol/=lib/limit-order-protocol/
 limit-order-settlement/=lib/limit-order-settlement/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 @openzeppelin/=lib/openzeppelin-contracts/
+@gnosis.pm/safe-contracts/=node_modules/@gnosis.pm/safe-contracts/
+@chainlink/contracts/=node_modules/@chainlink/contracts/

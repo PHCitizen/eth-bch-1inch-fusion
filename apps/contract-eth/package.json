@@ -16,5 +16,9 @@
     "hardhat": "^3.0.0-next.24",
     "mocha": "^11.0.0",
     "typescript": "~5.8.0"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "0.8.0",
+    "@gnosis.pm/safe-contracts": "1.3.0"
   }
 }
