@@ -2,6 +2,19 @@
   "name": "contract-eth",
   "type": "module",
   "version": "1.0.0",
+  "exports": {
+    ".": {
+      "import": "./types/ethers-contracts/index.ts",
+      "types": "./types/ethers-contracts/index.ts"
+    },
+    "./abi/*": {
+      "import": "./artifacts/contracts/*",
+      "types": "./artifacts.d.ts"
+    }
+  },
+  "scripts": {
+    "prepare": "pnpm hardhat compile"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^4.0.0-next.24",
     "@nomicfoundation/hardhat-ignition": "^3.0.0-next.24",

@@ -26,7 +26,8 @@
     "react-dom": "19.1.0",
     "tailwind-merge": "^3.3.1",
     "tw-animate-css": "^1.3.6",
-    "xstate": "^5.20.1"
+    "xstate": "^5.20.1",
+    "contract-eth": "workspace:*"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
