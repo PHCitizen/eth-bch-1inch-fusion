@@ -71,5 +71,5 @@ if (!RESOLVER_CONTRACT_ADDR) {
     resolverOwner.address
   );
   RESOLVER_CONTRACT_ADDR = await resolverContract.getAddress();
-  console.log("Escrow Factory deployed at:", RESOLVER_CONTRACT_ADDR);
+  console.log("Resolver deployed at:", RESOLVER_CONTRACT_ADDR);
 }
