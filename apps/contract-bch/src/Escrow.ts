@@ -2,9 +2,10 @@ import Sdk, { EvmAddress } from "@1inch/cross-chain-sdk";
 import {
   Contract,
   NetworkProvider,
-  TransactionBuilder,
+  TransactionBuilder as TXBuilder,
   Utxo,
 } from "cashscript";
+import { TransactionBuilderOptions } from "cashscript/dist/TransactionBuilder.js";
 import { binToHex, decodeTransactionBch, hexToBin } from "@bitauth/libauth";
 
 import EscrowSrcAbi from "../artifacts/EscrowSrc.artifact.js";
@@ -13,6 +14,13 @@ import EscrowDstAbi from "../artifacts/EscrowDst.artifact.js";
 import { Wallet } from "./Wallet.js";
 import { evmAddressToBch, evmAddressToBchPubkHash } from "./Address";
 import { assert, bytecodeToScript, isValidContract } from "./utils.js";
+
+class TransactionBuilder extends TXBuilder {
+  constructor(params: TransactionBuilderOptions) {
+    super(params);
+    this.setMaxFee(50_000n);
+  }
+}
 
 export class BchEscrowContract {
   constructor(
@@ -48,6 +56,9 @@ export class BchEscrowContract {
       [
         timelock.publicWithdrawal,
         timelock.privateCancellation,
+        this.immutables.amount,
+        this.tokenCategory,
+        this.order.dstSafetyDeposit,
         this.order.hashLock.toString(),
         evmAddressToBchPubkHash(this.immutables.taker),
         evmAddressToBchPubkHash(this.order.maker),
@@ -72,7 +83,7 @@ export class BchEscrowContract {
       });
   }
 
-  private validateBroadcastedTx(broadcastedTx: string) {
+  private validateDstFunding(broadcastedTx: string) {
     const { order, immutables, tokenCategory } = this;
     const timelock = immutables.timeLocks.toSrcTimeLocks();
 
@@ -80,9 +91,38 @@ export class BchEscrowContract {
     assert(typeof tx !== "string", `Invalid transaction: ${tx}`);
 
     const unlockingBytecode = bytecodeToScript(tx.inputs[0].unlockingBytecode);
-    const contract = unlockingBytecode[
-      unlockingBytecode.length - 1
-    ] as Uint8Array;
+    assert(unlockingBytecode.length === 2, "Must be funding function");
+    assert(typeof unlockingBytecode[0] !== "number", "");
+    assert(unlockingBytecode[0].length === 0, "Must be funding function");
+    const contract = unlockingBytecode[1] as Uint8Array;
+
+    assert(
+      isValidContract(EscrowDstAbi, contract, [
+        timelock.publicWithdrawal,
+        timelock.privateCancellation,
+        immutables.amount,
+        tokenCategory,
+        order.dstSafetyDeposit,
+        order.hashLock.toString(),
+        null,
+        binToHex(evmAddressToBchPubkHash(order.maker)),
+      ]),
+      "Invalid broadcasted contract"
+    );
+  }
+
+  private validateSrcFunding(broadcastedTx: string) {
+    const { order, immutables, tokenCategory } = this;
+    const timelock = immutables.timeLocks.toSrcTimeLocks();
+
+    const tx = decodeTransactionBch(hexToBin(broadcastedTx));
+    assert(typeof tx !== "string", `Invalid transaction: ${tx}`);
+
+    const unlockingBytecode = bytecodeToScript(tx.inputs[0].unlockingBytecode);
+    assert(unlockingBytecode.length === 2, "Must be funding function");
+    assert(typeof unlockingBytecode[0] !== "number", "");
+    assert(unlockingBytecode[0].length === 0, "Must be funding function");
+    const contract = unlockingBytecode[1] as Uint8Array;
 
     assert(
       isValidContract(EscrowSrcAbi, contract, [
@@ -100,7 +140,7 @@ export class BchEscrowContract {
     );
   }
 
-  fundSafetyDeposit(escrowUtxo: Utxo, depositUtxo: Utxo, signer: Wallet) {
+  fundSrcSafetyDeposit(escrowUtxo: Utxo, depositUtxo: Utxo, signer: Wallet) {
     assert(escrowUtxo.token === undefined, "already funded by maker");
 
     const contract = this.calcSrcContract();
@@ -119,6 +159,43 @@ export class BchEscrowContract {
       });
   }
 
+  fundDstSafetyDepositAndToken(
+    escrowUtxo: Utxo,
+    depositUtxo: Utxo,
+    signer: Wallet
+  ) {
+    const { tokenCategory, immutables, order } = this;
+    const tokenDeposit = immutables.amount;
+    const safetyDeposit = order.srcSafetyDeposit;
+
+    assert(escrowUtxo.token === undefined, "already funded");
+    assert(depositUtxo.token !== undefined, "no deposit token");
+    assert(depositUtxo.token.category === tokenCategory, "Wrong tokens");
+    assert(depositUtxo.token.amount === tokenDeposit, "Wrong amount");
+
+    const contract = this.calcSrcContract();
+
+    return new TransactionBuilder({ provider: this.provider })
+      .addInput(escrowUtxo, contract.unlock.fundSafetyDeposit())
+      .addInput(depositUtxo, signer.unlockP2PKH())
+      .addOutput({
+        to: contract.address,
+        amount: safetyDeposit,
+        token: {
+          amount: immutables.amount,
+          category: tokenCategory,
+        },
+      })
+      .addOutput({
+        to: signer.address,
+        amount: depositUtxo.satoshis - safetyDeposit - 1000n,
+        token: {
+          category: this.tokenCategory,
+          amount: depositUtxo.token.amount - immutables.amount,
+        },
+      });
+  }
+
   fundSrcTokens(
     escrowUtxo: Utxo,
     tokenUtxo: Utxo,
@@ -134,7 +211,7 @@ export class BchEscrowContract {
     );
     assert(tokenUtxo.token.amount >= deposit, "Not enough tokens");
 
-    this.validateBroadcastedTx(broadcastedTx);
+    this.validateSrcFunding(broadcastedTx);
 
     const contract = this.calcSrcContract();
 
@@ -160,34 +237,18 @@ export class BchEscrowContract {
   }
 
   deployDst(utxo: Utxo, signer: Wallet) {
-    const { immutables, order, tokenCategory } = this;
-
-    const safetyDeposit = order.dstSafetyDeposit;
-    const tokenDeposit = immutables.amount;
-
-    assert(utxo.satoshis >= safetyDeposit, "Not enough BCH");
-    assert(utxo.token !== undefined, "No tokens");
-    assert(utxo.token.category === tokenCategory, "Wrong tokens");
-    assert(utxo.token.amount === tokenDeposit, "Wrong amount");
+    assert(utxo.token === undefined, "Utxo must not have tokens");
 
     const contract = this.calcDstContract();
     return new TransactionBuilder({ provider: this.provider })
       .addInput(utxo, signer.unlockP2PKH())
       .addOutput({
         to: contract.address,
-        amount: immutables.safetyDeposit,
-        token: {
-          category: tokenCategory,
-          amount: tokenDeposit,
-        },
+        amount: 1000n,
       })
       .addOutput({
-        to: signer.tokenAddress,
+        to: signer.address,
         amount: utxo.satoshis - 1000n,
-        token: {
-          category: tokenCategory,
-          amount: utxo.token.amount - tokenDeposit,
-        },
       });
   }
 

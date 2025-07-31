@@ -21,10 +21,12 @@ contract EscrowSrc(
     require(tx.version == 2, "Invalid version");
     require(this.activeInputIndex == 0, "Invalid input index");
 
-    // ensure that all tokens are sent to resolver
+    require(tx.inputs[0].tokenCategory == bytes32(0), "Contract must be empty");
+    require(tx.inputs[0].tokenAmount == 0, "Contract must be empty");
+
     require(tx.outputs[0].lockingBytecode == tx.inputs[0].lockingBytecode, "Invalid output destination");
-    require(tx.outputs[0].tokenCategory == tx.inputs[0].tokenCategory, "Invalid output category");
-    require(tx.outputs[0].tokenAmount == tx.inputs[0].tokenAmount, "Invalid output token");
+    require(tx.outputs[0].tokenCategory == token, "Invalid output category");
+    require(tx.outputs[0].tokenAmount == amount, "Invalid output token");
     require(tx.outputs[0].value == safetyDeposit, "Invalid value sats");
   }
 

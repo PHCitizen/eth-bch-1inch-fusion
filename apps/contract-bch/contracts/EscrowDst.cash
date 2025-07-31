@@ -6,10 +6,25 @@ contract EscrowDst(
   // time when resolver can cancel
   int resolverCancellTimestamp,
 
+  int amount,
+  bytes32 token,
+  int safetyDeposit,
+
   bytes32 hashlock,
   bytes20 resolverPubkHash,
   bytes20 makerPubkHash
 ) {
+  function fundSafetyDepositAndToken() {
+    require(tx.version == 2, "Invalid version");
+    require(this.activeInputIndex == 0, "Invalid input index");
+
+    // ensure that all tokens are sent to resolver
+    require(tx.outputs[0].lockingBytecode == tx.inputs[0].lockingBytecode, "Invalid output destination");
+    require(tx.outputs[0].tokenCategory == token, "Invalid output category");
+    require(tx.outputs[0].tokenAmount == amount, "Invalid output token");
+    require(tx.outputs[0].value == safetyDeposit, "Invalid value sats");
+  }
+
   function unlock(bool isResolver, bytes32 secret) {
     require(tx.version == 2, "Invalid version");
     require(this.activeInputIndex == 0, "Invalid input index");
