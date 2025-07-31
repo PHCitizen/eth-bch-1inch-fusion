@@ -6,7 +6,7 @@ import {
 } from "@bitauth/libauth";
 import { SignatureTemplate } from "cashscript";
 
-type Network = "testnet" | "mainnet";
+export type Network = "testnet" | "mainnet";
 
 export class Wallet {
   template: SignatureTemplate;

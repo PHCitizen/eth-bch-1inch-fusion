@@ -5,12 +5,7 @@ import {
   TransactionBuilder,
   Utxo,
 } from "cashscript";
-import {
-  binToHex,
-  decodeTransactionBch,
-  hexToBin,
-  vmNumberToBigInt,
-} from "@bitauth/libauth";
+import { binToHex, decodeTransactionBch, hexToBin } from "@bitauth/libauth";
 
 import EscrowSrcAbi from "../artifacts/EscrowSrc.artifact.js";
 import EscrowDstAbi from "../artifacts/EscrowDst.artifact.js";
@@ -18,7 +13,6 @@ import EscrowDstAbi from "../artifacts/EscrowDst.artifact.js";
 import { Wallet } from "./Wallet.js";
 import { evmAddressToBch, evmAddressToBchPubkHash } from "./Address";
 import { assert, bytecodeToScript, isValidContract } from "./utils.js";
-import { BCH_CHAIN_ID } from "./config";
 
 export class BchEscrowContract {
   constructor(
@@ -28,7 +22,7 @@ export class BchEscrowContract {
     private tokenCategory: string
   ) {}
 
-  private calcSrcContract() {
+  calcSrcContract() {
     const timelock = this.immutables.timeLocks.toSrcTimeLocks();
     return new Contract(
       EscrowSrcAbi,
@@ -47,7 +41,7 @@ export class BchEscrowContract {
     );
   }
 
-  private calcDstContract() {
+  calcDstContract() {
     const timelock = this.immutables.timeLocks.toDstTimeLocks();
     return new Contract(
       EscrowDstAbi,
@@ -62,7 +56,7 @@ export class BchEscrowContract {
     );
   }
 
-  async deploySrc(safetyDepositUtxo: Utxo, signer: Wallet) {
+  deploySrc(safetyDepositUtxo: Utxo, signer: Wallet) {
     const { srcSafetyDeposit } = this.order.escrowExtension;
     const contract = this.calcSrcContract();
 
@@ -106,7 +100,7 @@ export class BchEscrowContract {
     );
   }
 
-  async fundSafetyDeposit(escrowUtxo: Utxo, depositUtxo: Utxo, signer: Wallet) {
+  fundSafetyDeposit(escrowUtxo: Utxo, depositUtxo: Utxo, signer: Wallet) {
     assert(escrowUtxo.token === undefined, "already funded by maker");
 
     const contract = this.calcSrcContract();
@@ -125,7 +119,7 @@ export class BchEscrowContract {
       });
   }
 
-  async fundSrcTokens(
+  fundSrcTokens(
     escrowUtxo: Utxo,
     tokenUtxo: Utxo,
     tokenUtxoSigner: Wallet,
@@ -165,7 +159,7 @@ export class BchEscrowContract {
       });
   }
 
-  async deployDst(utxo: Utxo, signer: Wallet) {
+  deployDst(utxo: Utxo, signer: Wallet) {
     const { immutables, order, tokenCategory } = this;
 
     const safetyDeposit = order.dstSafetyDeposit;
@@ -197,7 +191,7 @@ export class BchEscrowContract {
       });
   }
 
-  async withdrawSrc(
+  withdrawSrc(
     escrowUtxo: Utxo,
     feeUtxo: Utxo,
     signer: Wallet,
@@ -233,7 +227,7 @@ export class BchEscrowContract {
     return tx;
   }
 
-  async withdrawDst(
+  withdrawDst(
     escrowUtxo: Utxo,
     feeUtxo: Utxo,
     signer: Wallet,
@@ -275,7 +269,7 @@ export class BchEscrowContract {
     return tx;
   }
 
-  async cancelSrc(
+  cancelSrc(
     escrowUtxo: Utxo,
     feeUtxo: Utxo,
     signer: Wallet,
@@ -316,7 +310,7 @@ export class BchEscrowContract {
     return tx;
   }
 
-  async cancelDst(escrowUtxo: Utxo, feeUtxo: Utxo, signer: Wallet) {
+  cancelDst(escrowUtxo: Utxo, feeUtxo: Utxo, signer: Wallet) {
     const { order, immutables, tokenCategory } = this;
 
     const { dstSafetyDeposit } = order;

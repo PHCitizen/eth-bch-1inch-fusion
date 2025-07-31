@@ -7,6 +7,8 @@ let ACCESS_TOKEN_ADDR: string | null = null;
 let ESCROW_FACTORY_ADDR: string | null = null;
 let RESOLVER_CONTRACT_ADDR: string | null = null;
 
+let SWAP_TOKEN_ADDR: string | null = null;
+
 const { ethers } = await network.connect();
 
 const networkInfo = await ethers.provider.getNetwork();
@@ -23,9 +25,9 @@ const [feeOwner, accessOwner, escrowFactoryOwner, resolverOwner] =
 
 if (!LOP_ADDR) {
   const LOPFactory = await ethers.getContractFactory("LimitOrderProtocol");
-  const lop = await LOPFactory.deploy(WETH_ADDR);
+  const lop = await LOPFactory.connect(escrowFactoryOwner).deploy(WETH_ADDR);
   LOP_ADDR = await lop.getAddress();
-  console.log("LOP deployed at:", LOP_ADDR);
+  console.log(`lop: "${LOP_ADDR}",`);
 }
 
 const MockERCFactory = await ethers.getContractFactory("MockERC20");
@@ -36,7 +38,7 @@ if (!FEE_TOKEN_ADDR) {
     "FeeT"
   );
   FEE_TOKEN_ADDR = await feeToken.getAddress();
-  console.log("Fee token deployed at:", FEE_TOKEN_ADDR);
+  console.log(`feeToken: "${FEE_TOKEN_ADDR}",`);
 }
 
 if (!ACCESS_TOKEN_ADDR) {
@@ -46,7 +48,7 @@ if (!ACCESS_TOKEN_ADDR) {
     "AccT"
   );
   ACCESS_TOKEN_ADDR = await accessToken.getAddress();
-  console.log("Access token deployed at:", ACCESS_TOKEN_ADDR);
+  console.log(`accessToken: "${ACCESS_TOKEN_ADDR}",`);
 }
 
 if (!ESCROW_FACTORY_ADDR) {
@@ -60,7 +62,7 @@ if (!ESCROW_FACTORY_ADDR) {
     1000n
   );
   ESCROW_FACTORY_ADDR = await escrowFactory.getAddress();
-  console.log("Escrow Factory deployed at:", ESCROW_FACTORY_ADDR);
+  console.log(`escrowFactory: "${ESCROW_FACTORY_ADDR}",`);
 }
 
 if (!RESOLVER_CONTRACT_ADDR) {
@@ -71,5 +73,15 @@ if (!RESOLVER_CONTRACT_ADDR) {
     resolverOwner.address
   );
   RESOLVER_CONTRACT_ADDR = await resolverContract.getAddress();
-  console.log("Resolver deployed at:", RESOLVER_CONTRACT_ADDR);
+  console.log(`resolver: "${RESOLVER_CONTRACT_ADDR}",`);
+}
+
+if (!SWAP_TOKEN_ADDR) {
+  const token = await MockERCFactory.deploy(
+    accessOwner.address,
+    "USD Fake",
+    "USDF"
+  );
+  SWAP_TOKEN_ADDR = await token.getAddress();
+  console.log(`fakeToken: "${SWAP_TOKEN_ADDR}",`);
 }
