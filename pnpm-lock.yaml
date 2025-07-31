@@ -51,6 +51,9 @@ importers:
 
   apps/contract-bch:
     dependencies:
+      '@1inch/cross-chain-sdk':
+        specifier: 0.2.1-rc.58
+        version: 0.2.1-rc.58(bufferutil@4.0.9)(typescript@5.9.0-beta)(utf-8-validate@5.0.10)
       '@bitauth/libauth':
         specifier: ^3.1.0-next.2
         version: 3.1.0-next.7
@@ -134,9 +137,15 @@ importers:
 
   apps/frontend:
     dependencies:
+      '@1inch/byte-utils':
+        specifier: ^3.1.0
+        version: 3.1.0
       '@1inch/cross-chain-sdk':
         specifier: 0.2.1-rc.58
         version: 0.2.1-rc.58(bufferutil@4.0.9)(typescript@5.9.0-beta)(utf-8-validate@5.0.10)
+      '@bitauth/libauth':
+        specifier: ^3.1.0-next.2
+        version: 3.1.0-next.7
       '@radix-ui/react-label':
         specifier: ^2.1.7
         version: 2.1.7(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -155,12 +164,18 @@ importers:
       axios:
         specifier: ^1.11.0
         version: 1.11.0
+      cashscript:
+        specifier: ^0.11.3
+        version: 0.11.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      contract-bch:
+        specifier: workspace:*
+        version: link:../contract-bch
       contract-eth:
         specifier: workspace:*
         version: link:../contract-eth
@@ -5027,7 +5042,7 @@ snapshots:
     dependencies:
       '@coral-xyz/anchor-errors': 0.31.1
       '@coral-xyz/borsh': 0.31.1(@solana/web3.js@1.98.2(bufferutil@4.0.9)(typescript@5.9.0-beta)(utf-8-validate@5.0.10))
-      '@noble/hashes': 1.3.2
+      '@noble/hashes': 1.8.0
       '@solana/web3.js': 1.98.2(bufferutil@4.0.9)(typescript@5.9.0-beta)(utf-8-validate@5.0.10)
       bn.js: 5.2.2
       bs58: 4.0.1

@@ -12,12 +12,7 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "skipLibCheck": true
   },
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/dist-test",
-    "taksks",
-  ],
+  "exclude": ["node_modules", "dist", "**/dist-test", "tasks"]
 }

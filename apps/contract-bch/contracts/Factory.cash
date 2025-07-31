@@ -1,0 +1,70 @@
+pragma cashscript ~0.11.0;
+
+
+/**
+ * User can lock funds when creating order, then the taker can get funds without
+ *    waiting the user to funds to the escrow
+ * This is the equivalent of pulling system on EVM where user give allowance to LOP 
+ *    then LOP send tokens to escrow
+ */
+contract PreLockOrder(
+  // OP push operation to push escrowSrcBytecode to the stack
+  bytes escrowSrcBytecodePrefix,
+  bytes escrowSrcBytecode,
+
+  bytes32 accessToken,
+) {
+  function deploySrc(
+    bytes32 orderHash,
+    bytes32 hashlock,
+    pubkey makerPubkey,
+    bytes32 token,
+    bytes32 amount,
+    int safetyDeposit,
+
+    // delay where stage ends
+    // we can say that deployAt + srcPrivateWithdrawalLock == resolver cant withdraw
+    // bytes4 srcFinalityLock,
+    bytes4 srcPrivateWithdrawalLock,
+    bytes4 srcPublicWithdrawalLock,
+    bytes4 srcPrivateCancellationLock,
+    // bytes4 dstFinalityLock,
+    // bytes4 dstPrivateWithdrawalLock,
+    // bytes4 dstPublicWithdrawalLock,
+    bytes4 deployedAt,
+
+    datasig makerSig,
+    pubkey resolverPubkey,
+  ) {
+    require(tx.version == 2, "Invalid version");
+    require(this.activeInputIndex == 0, "Invalid input index");
+
+    // require recursive contract
+    require(tx.outputs[0].lockingBytecode == tx.inputs[0].lockingBytecode, "");
+    require(tx.outputs[0].value == tx.inputs[0].value, "");
+
+    // check that resolver has access by checking if they have access nft
+    require(tx.inputs[1].tokenCategory == accessToken, "Access token required");
+
+    // bytes32 timelocks = deployedAt + dstPublicWithdrawalLock + dstPrivateWithdrawalLock + dstFinalityLock
+    //             + srcPrivateCancellationLock + srcPublicWithdrawalLock + srcPrivateWithdrawalLock + srcFinalityLock;
+    bytes order = orderHash + hashlock + bytes(makerPubkey) + token + amount + bytes(safetyDeposit);
+    
+    // check that owner makes the order
+    require(checkDataSig(makerSig, order, makerPubkey), "Invalid owner sig");
+
+    bytes computeContract = 
+        0x14 + hash160(makerPubkey)
+        + 0x14 + hash160(resolverPubkey)
+        + 0x20 + hashlock
+        + 0x04 + (deployedAt + srcPrivateCancellationLock)
+        + 0x04 + (deployedAt + srcPublicWithdrawalLock)
+        + 0x04 + (deployedAt + srcPrivateWithdrawalLock)
+        + escrowSrcBytecodePrefix + escrowSrcBytecode;
+    //                              OP_HASH256   OP_PUSH_32   < 32_BYTES >               OP_EQUAL
+    bytes contractLockingBytecode = 0xaa       + 0x20       + hash256(computeContract) + 0x87;
+    require(tx.outputs[1].lockingBytecode == contractLockingBytecode, "");
+    require(tx.outputs[1].value == safetyDeposit, "Invalid safety deposit");
+    require(tx.outputs[1].tokenCategory == token, "Invalid token category");
+  }
+}

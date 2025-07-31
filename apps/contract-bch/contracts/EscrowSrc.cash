@@ -1,19 +1,50 @@
 pragma cashscript ~0.11.0;
 
 contract EscrowSrc(
+  // time when other resolver can unlock
   int publicUnlockTimestamp,
+  // time when resolver can cancel
   int resolverCancellTimestamp,
+  // time when other resolver can cancel
   int publicCancelTimestamp,
+  
+  int amount,
+  bytes32 token,
+  int safetyDeposit,
 
   bytes32 hashlock,
-  bytes resolverLockingBytecode,
-  bytes makerLockingBytecode
+  bytes20 resolverPubkHash,
+  bytes20 makerPubkHash
 ) {
+  // Intentional so resolver expose the contract bytecode
+  function fundSafetyDeposit() {
+    require(tx.version == 2, "Invalid version");
+    require(this.activeInputIndex == 0, "Invalid input index");
+
+    // ensure that all tokens are sent to resolver
+    require(tx.outputs[0].lockingBytecode == tx.inputs[0].lockingBytecode, "Invalid output destination");
+    require(tx.outputs[0].tokenCategory == tx.inputs[0].tokenCategory, "Invalid output category");
+    require(tx.outputs[0].tokenAmount == tx.inputs[0].tokenAmount, "Invalid output token");
+    require(tx.outputs[0].value == safetyDeposit, "Invalid value sats");
+  }
+
+  function lockMakerTokens() {
+    require(tx.version == 2, "Invalid version");
+    require(this.activeInputIndex == 0, "Invalid input index");
+
+    // ensure that all tokens are sent to resolver
+    require(tx.outputs[0].lockingBytecode == tx.inputs[0].lockingBytecode, "Invalid output destination");
+    require(tx.outputs[0].tokenCategory == token, "Invalid output category");
+    require(tx.outputs[0].tokenAmount == amount, "Invalid output token");
+    require(tx.outputs[0].value == tx.inputs[0].value, "Invalid value sats");
+  }
+
   function unlock(bool isResolver, bytes32 secret) {
     require(tx.version == 2, "Invalid version");
     require(this.activeInputIndex == 0, "Invalid input index");
 
     // ensure that all tokens are sent to resolver
+    bytes resolverLockingBytecode = new LockingBytecodeP2PKH(resolverPubkHash);
     require(tx.outputs[0].lockingBytecode == resolverLockingBytecode, "Invalid output destination");
     require(tx.outputs[0].tokenCategory == tx.inputs[0].tokenCategory , "Invalid output category");
     require(tx.outputs[0].tokenAmount == tx.inputs[0].tokenAmount , "Invalid output token");
@@ -36,6 +67,7 @@ contract EscrowSrc(
     require(this.activeInputIndex == 0, "Invalid input index");
 
     // ensure that all tokens are sent to maker
+    bytes makerLockingBytecode = new LockingBytecodeP2PKH(makerPubkHash);
     require(tx.outputs[0].lockingBytecode == makerLockingBytecode, "Invalid output. Must be the maker");
     require(tx.outputs[0].tokenCategory == tx.inputs[0].tokenCategory , "Invalid output category");
     require(tx.inputs[0].tokenAmount == tx.outputs[0].tokenAmount, "Invalid output token");
@@ -44,6 +76,7 @@ contract EscrowSrc(
       require(tx.locktime >= resolverCancellTimestamp, "Invalid locktime for resolver cancel");
 
       // ensure that collateral is sent to resolver
+      bytes resolverLockingBytecode = new LockingBytecodeP2PKH(resolverPubkHash);
       require(tx.outputs[1].lockingBytecode == resolverLockingBytecode, "Invalid output1 destination");
       require(tx.outputs[1].value == tx.inputs[0].value, "Invalid output1 collateral");
     } else {

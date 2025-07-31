@@ -1,18 +1,21 @@
 pragma cashscript ~0.11.0;
 
 contract EscrowDst(
+  // time when other resolver can unlock
   int publicUnlockTimestamp,
+  // time when resolver can cancel
   int resolverCancellTimestamp,
 
   bytes32 hashlock,
-  bytes resolverLockingBytecode,
-  bytes makerLockingBytecode
+  bytes20 resolverPubkHash,
+  bytes20 makerPubkHash
 ) {
   function unlock(bool isResolver, bytes32 secret) {
     require(tx.version == 2, "Invalid version");
     require(this.activeInputIndex == 0, "Invalid input index");
 
     // ensure that all tokens are sent to maker
+    bytes makerLockingBytecode = new LockingBytecodeP2PKH(makerPubkHash);
     require(tx.outputs[0].lockingBytecode == makerLockingBytecode, "Invalid output destination");
     require(tx.outputs[0].tokenCategory == tx.inputs[0].tokenCategory, "Invalid output category");
     require(tx.outputs[0].tokenAmount == tx.inputs[0].tokenAmount, "Invalid output token");
@@ -22,6 +25,7 @@ contract EscrowDst(
 
     if(isResolver) {
       // ensure that collateral is sent to resolver
+      bytes resolverLockingBytecode = new LockingBytecodeP2PKH(resolverPubkHash);
       require(tx.outputs[1].lockingBytecode == resolverLockingBytecode, "Invalid output1 destination");
       require(tx.outputs[1].value == tx.inputs[0].value, "Invalid output1 collateral");
     } else {
@@ -37,6 +41,7 @@ contract EscrowDst(
     require(tx.locktime >= resolverCancellTimestamp, "Invalid locktime for resolver cancel");
 
     // ensure that all tokens are sent to resolver
+    bytes resolverLockingBytecode = new LockingBytecodeP2PKH(resolverPubkHash);
     require(tx.outputs[0].lockingBytecode == resolverLockingBytecode, "Invalid output destination");
     require(tx.outputs[0].tokenCategory == tx.inputs[0].tokenCategory, "Invalid output token category");
     require(tx.outputs[0].tokenAmount == tx.inputs[0].tokenAmount, "Invalid output token");
